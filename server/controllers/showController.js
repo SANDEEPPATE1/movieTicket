@@ -62,12 +62,38 @@ export const getNowPlayingMovies = async (req, res) => {
     const { data } = await tmdbGet("/movie/now_playing");
     return res.json({
       success: true,
+      source: "tmdb",
       movies: Array.isArray(data.results) ? data.results : [],
       page: data.page || 1,
       total_pages: data.total_pages || 1,
     });
   } catch (error) {
-    return sendError(res, error, "Could not load now-playing movies from TMDB.");
+    // If TMDB is temporarily unavailable or its key is misconfigured,
+    // let admins schedule a movie that is already saved in MongoDB.
+    console.error("TMDB now-playing request failed:", error.response?.data || error.message);
+    try {
+      const savedMovies = await Movie.find({})
+        .sort({ createdAt: -1 })
+        .limit(40)
+        .lean();
+
+      if (savedMovies.length > 0) {
+        const movies = savedMovies.map((movie) => ({
+          ...movie,
+          id: Number(movie._id) || movie._id,
+        }));
+        return res.json({
+          success: true,
+          source: "database",
+          warning: "TMDB is unavailable right now. Showing movies already saved in your database.",
+          movies,
+        });
+      }
+    } catch (dbError) {
+      console.error("Could not load saved movies as fallback:", dbError.message);
+    }
+
+    return sendError(res, error, "Could not load movies from TMDB, and no saved movies are available as fallback.");
   }
 };
 
