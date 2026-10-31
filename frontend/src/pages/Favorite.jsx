@@ -8,7 +8,7 @@ import Loading from "../components/Loading";
 import { useApi } from "../library/api";
 
 const Favorite = () => {
-  const { isSignedIn } = useUser();
+  const { isSignedIn, isLoaded } = useUser();
   const { openSignIn } = useClerk();
   const { request } = useApi();
   const [movies, setMovies] = useState([]);
@@ -27,12 +27,13 @@ const Favorite = () => {
   };
 
   useEffect(() => {
+    if (!isLoaded) return;
     if (!isSignedIn) {
       setLoading(false);
       return;
     }
     loadFavorites();
-  }, [isSignedIn]);
+  }, [isLoaded, isSignedIn]);
 
   const removeFavorite = async (movieId) => {
     try {
@@ -47,7 +48,7 @@ const Favorite = () => {
     }
   };
 
-  if (loading) return <Loading />;
+  if (!isLoaded || loading) return <Loading />;
 
   return (
     <main className="relative my-32 mb-48 min-h-[70vh] overflow-hidden px-6 md:px-16 lg:px-40 xl:px-44">
@@ -71,7 +72,7 @@ const Favorite = () => {
         <div className="flex flex-wrap justify-center gap-6 md:justify-start">
           {movies.map((movie) => (
             <div key={movie._id} className="relative">
-              <MovieCard movie={movie} />
+              <MovieCard movie={movie} showFavoriteButton={false} />
               <button onClick={() => removeFavorite(movie._id)} aria-label="Remove favorite"
                 className="absolute right-5 top-5 rounded-full bg-black/75 p-2 text-primary hover:bg-black">
                 <Heart className="h-5 w-5 fill-current" />
