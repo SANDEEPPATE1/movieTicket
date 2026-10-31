@@ -1,4 +1,5 @@
 import express from "express";
+import { requireAuth } from "@clerk/express";
 import {
   getFavorites,
   getUserBookings,
@@ -7,8 +8,8 @@ import {
 
 const userRouter = express.Router();
 
-userRouter.get("/bookings", getUserBookings);
-userRouter.post("/update-favorite", updateFavorite);
-userRouter.get("/favorites", getFavorites);
+userRouter.get("/bookings", requireAuth(), getUserBookings);
+userRouter.post("/update-favorite", requireAuth(), updateFavorite);
+userRouter.get("/favorites", requireAuth(), getFavorites);
 
 export default userRouter;
