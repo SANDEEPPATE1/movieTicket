@@ -2,12 +2,20 @@ import mongoose from "mongoose";
 
 const connectDB = async () => {
   try {
-    mongoose.connection.on("connected", () =>
-      console.log("Database connected")
-    );
-    await mongoose.connect(`${process.env.MONGODB_URI}/QuickShow`);
+    const mongoURI = process.env.MONGODB_URI?.trim();
+
+    if (!mongoURI) {
+      throw new Error("MONGODB_URI is missing from environment variables");
+    }
+
+    await mongoose.connect(mongoURI, {
+      dbName: "QuickShow",
+    });
+
+    console.log("MongoDB connected successfully:", mongoose.connection.name);
   } catch (error) {
-    console.log(error.message);
+    console.error("MongoDB connection failed:", error.message);
+    throw error;
   }
 };
 
