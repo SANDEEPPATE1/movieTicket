@@ -18,6 +18,7 @@ const MovieDetails = () => {
   useEffect(() => {
     let active = true;
     setShow(null);
+    setError("");
     request(`/api/show/${id}`)
       .then((data) => { if (active) setShow({ movie: data.movie, dateTime: data.dateTime || {} }); })
       .catch((err) => { if (active) setError(err.message); });
@@ -40,9 +41,9 @@ const MovieDetails = () => {
           <p className="mt-2 max-w-xl text-sm leading-tight text-gray-400">{movie.overview}</p>
           <p>{timeformat(movie.runtime)} · {(movie.genres || []).map((genre) => genre.name).join(", ")} · {movie.release_date?.split("-")[0]}</p>
           <div className="mt-4 flex flex-wrap items-center gap-4">
-            <button type="button" className="flex cursor-pointer items-center gap-2 rounded-md bg-gray-800 px-7 py-3 text-sm font-medium transition hover:bg-gray-900">
-              <PlayCircleIcon className="h-5 w-5" />Watch Trailer
-            </button>
+            <a href={`https://www.youtube.com/results?search_query=${encodeURIComponent(`${movie.title} official trailer`)}`} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-md bg-gray-800 px-7 py-3 text-sm font-medium transition hover:bg-gray-900">
+              <PlayCircleIcon className="h-5 w-5" />Find Trailer
+            </a>
             <a href="#dateSelect" className="cursor-pointer rounded-md bg-primary px-10 py-3 text-sm font-medium transition hover:bg-primary-dull">Buy Tickets</a>
           </div>
         </div>
