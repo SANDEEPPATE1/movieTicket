@@ -1,12 +1,9 @@
-import React from 'react'
+import React from "react";
 
-const Loading = () =>{
-  return(
-    <div className='flex justify-center items-center h-[80vh'>
-       <div className='animate-spin rounded-full h-14 w-14 border-2 border-t-primary opacity-1000'>
+const Loading = () => (
+  <div className="flex min-h-[55vh] items-center justify-center" role="status" aria-label="Loading">
+    <div className="h-12 w-12 animate-spin rounded-full border-4 border-white/15 border-t-primary" />
+  </div>
+);
 
-       </div>
-    </div>
-  )
-}
 export default Loading;
