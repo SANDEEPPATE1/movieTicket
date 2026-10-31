@@ -6,7 +6,7 @@ import toast from "react-hot-toast";
 import timeformat from "../library/timeformat";
 import { useApi } from "../library/api";
 
-const MovieCard = ({ movie }) => {
+const MovieCard = ({ movie, showFavoriteButton = true }) => {
   const navigate = useNavigate();
   const { isSignedIn } = useUser();
   const { openSignIn } = useClerk();
@@ -46,11 +46,13 @@ const MovieCard = ({ movie }) => {
 
   return (
     <article className="relative flex w-full max-w-[270px] flex-col justify-between overflow-hidden rounded-2xl border border-white/5 bg-[#17171b] p-3 transition duration-300 hover:-translate-y-1 hover:border-primary/40">
-      <button type="button" onClick={toggleFavorite} disabled={savingFavorite}
-        aria-label="Add or remove favorite" title="Add or remove favorite"
-        className="absolute right-5 top-5 z-10 rounded-full bg-black/70 p-2 text-white transition hover:bg-primary disabled:opacity-50">
-        <Heart className="h-4 w-4" />
-      </button>
+      {showFavoriteButton && (
+        <button type="button" onClick={toggleFavorite} disabled={savingFavorite}
+          aria-label="Add or remove favorite" title="Add or remove favorite"
+          className="absolute right-5 top-5 z-10 rounded-full bg-black/70 p-2 text-white transition hover:bg-primary disabled:opacity-50">
+          <Heart className="h-4 w-4" />
+        </button>
+      )}
       <button type="button" onClick={openMovie} className="block w-full text-left">
         <img
           src={imagePath ? (imagePath.startsWith("http") ? imagePath : `https://image.tmdb.org/t/p/w500${imagePath}`) : "/placeholder.png"}
