@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import { useAuth } from "@clerk/react";
 
 export const getApiBaseUrl = () =>
@@ -6,7 +7,7 @@ export const getApiBaseUrl = () =>
 export const useApi = () => {
   const { getToken } = useAuth();
 
-  const request = async (endpoint, options = {}) => {
+  const request = useCallback(async (endpoint, options = {}) => {
     let token = null;
 
     try {
@@ -31,7 +32,7 @@ export const useApi = () => {
         throw new Error("The server request timed out. Please try again.");
       }
       throw new Error(
-        "Unable to reach the QuickShow backend. Check VITE_BASE_URL and the backend deployment."
+        "Unable to reach the QuickShow backend. Check the configured API URL and backend deployment."
       );
     }
 
@@ -41,13 +42,11 @@ export const useApi = () => {
       : { message: await response.text().catch(() => "") };
 
     if (!response.ok || data.success === false) {
-      throw new Error(
-        data.message || `Request failed with status ${response.status}.`
-      );
+      throw new Error(data.message || `Request failed with status ${response.status}.`);
     }
 
     return data;
-  };
+  }, [getToken]);
 
   return { request };
 };
