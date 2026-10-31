@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import { useAuth } from "@clerk/react";
 
 export const getApiBaseUrl = () =>
-  (import.meta.env.VITE_BASE_URL || "http://localhost:3000").replace(/\/$/, "");
+  (import.meta.env.VITE_BASE_URL || "http://localhost:3000").trim().replace(/\/$/, "");
 
 export const useApi = () => {
   const { getToken } = useAuth();
@@ -32,7 +32,7 @@ export const useApi = () => {
         throw new Error("The server request timed out. Please try again.");
       }
       throw new Error(
-        "Unable to reach the QuickShow backend. Check the configured API URL and backend deployment."
+        "Unable to reach the QuickShow backend. Check VITE_BASE_URL and confirm the backend is deployed."
       );
     }
 
