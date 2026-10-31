@@ -86,23 +86,29 @@ const releaseSeatsAndDeleteBooking = inngest.createFunction(
   triggers:[{ event: "app/checkpayment" }],
   },
   async ({ event, step }) => {
-    const tenMinutesLater = new Date(Date.now() + 10 * 60 * 1000);
-    await step.sleepUntil("wait-for-10-minutes", tenMinutesLater);
+    // Keep the reservation alive for the same 30 minutes as the Stripe Checkout Session.
+    const thirtyMinutesLater = new Date(Date.now() + 30 * 60 * 1000);
+    await step.sleepUntil("wait-for-30-minutes", thirtyMinutesLater);
 
     await step.run("check-payment-status", async () => {
       const bookingId = event.data.bookingId;
       const booking = await Booking.findById(bookingId);
 
-      // If payment is not made, release seats and delete booking
-      if (!booking.isPaid) {
-        const show = await Show.findById(booking.show);
+      // A webhook may already have processed or removed the booking.
+      if (!booking || booking.isPaid) return;
+
+      const show = await Show.findById(booking.show);
+      if (show) {
         booking.bookedSeats.forEach((seat) => {
-          delete show.occupiedSeats[seat];
+          if (show.occupiedSeats?.[seat] === booking.user) {
+            delete show.occupiedSeats[seat];
+          }
         });
         show.markModified("occupiedSeats");
         await show.save();
-        await Booking.findByIdAndDelete(booking._id);
       }
+
+      await Booking.findByIdAndDelete(booking._id);
     });
   }
 );
@@ -161,7 +167,7 @@ const sendShowReminders = inngest.createFunction(
     // Prepare reminder tasks
     const reminderTasks = await step.run("prepare-reminder-tasks", async () => {
       const shows = await Show.find({
-        showTime: { $gte: windowStart, $lte: in8Hours },
+        showDateTime: { $gte: windowStart, $lte: in8Hours },
       }).populate("movie");
 
       const tasks = [];
@@ -181,7 +187,7 @@ const sendShowReminders = inngest.createFunction(
             userEmail: user.email,
             userName: user.name,
             movieTitle: show.movie.title,
-            showTime: show.showTime,
+            showTime: show.showDateTime,
           });
         }
       }
@@ -201,7 +207,7 @@ const sendShowReminders = inngest.createFunction(
             to: task.userEmail,
             subject: `Reminder: Your movie "${task.movieTitle}" starts soon!`,
             body: `<div style="font-family: Arial, sans-serif; padding: 20px;">
-        <h2>Hello ${task.user.name},</h2>
+        <h2>Hello ${task.userName},</h2>
         <p>This is a quick reminder that your movie:<p>
         <h3 style="color: #F84565;">"${task.movieTitle}"</h3>
         <p>
