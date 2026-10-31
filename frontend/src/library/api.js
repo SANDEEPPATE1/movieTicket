@@ -1,8 +1,17 @@
 import { useCallback } from "react";
 import { useAuth } from "@clerk/react";
 
-export const getApiBaseUrl = () =>
-  (import.meta.env.VITE_BASE_URL || "http://localhost:3000").trim().replace(/\/$/, "");
+export const getApiBaseUrl = () => {
+  const configuredUrl = import.meta.env.VITE_BASE_URL?.trim();
+
+  if (configuredUrl) return configuredUrl.replace(/\/$/, "");
+
+  // Local Vite development uses the local Express server.
+  if (import.meta.env.DEV) return "http://localhost:3000";
+
+  // Production can use same-origin API routes when frontend and backend share a domain.
+  return window.location.origin;
+};
 
 export const useApi = () => {
   const { getToken } = useAuth();
