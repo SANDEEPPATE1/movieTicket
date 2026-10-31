@@ -61,7 +61,7 @@ const AddShows = () => {
     if (!Number.isFinite(Number(showPrice)) || Number(showPrice) <= 0) {
       return setError("Please enter a show price greater than zero.");
     }
-    const showsInput = Object.entries(dateTimeSelection).map(([date, time]) => ({ date, time }));
+    const showsInput = Object.entries(dateTimeSelection).flatMap(([date, times]) => times.map((time) => ({ showDateTime: new Date(`${date}T${time}`).toISOString() })));
     if (!showsInput.length) return setError("Please add at least one show date and time.");
 
     setSaving(true);
