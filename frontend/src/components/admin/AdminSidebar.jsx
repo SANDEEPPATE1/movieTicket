@@ -1,37 +1,67 @@
-import React from "react";
-import { LayoutDashboard, ListCollapse, List, PlusSquare } from "lucide-react";
+import { assets } from "../../assets/assets";
+import {
+  LayoutDashboardIcon,
+  ListCollapseIcon,
+  ListIcon,
+  PlusSquareIcon,
+} from "lucide-react";
 import { NavLink } from "react-router-dom";
-import { useUser } from "@clerk/react";
-import { assets } from "../../QuickShow-assets/assets/assets";
 
 const AdminSidebar = () => {
-  const { user } = useUser();
-  const links = [
-    { name: "Dashboard", path: "/admin", icon: LayoutDashboard },
-    { name: "Add Shows", path: "/admin/add-shows", icon: PlusSquare },
-    { name: "List Shows", path: "/admin/list-shows", icon: List },
-    { name: "List Bookings", path: "/admin/list-bookings", icon: ListCollapse },
+  const user = {
+    firstName: "Admin",
+    lastName: "User",
+    imageUrl: assets.profile,
+  };
+
+  const adminNavlinks = [
+    { name: "Dashboard", path: "/admin", icon: LayoutDashboardIcon },
+    { name: "Add Shows", path: "/admin/add-shows", icon: PlusSquareIcon },
+    { name: "List Shows", path: "/admin/list-shows", icon: ListIcon },
+    {
+      name: "List Bookings",
+      path: "/admin/list-bookings",
+      icon: ListCollapseIcon,
+    },
   ];
 
   return (
-    <aside className="flex h-[calc(100vh-64px)] w-16 shrink-0 flex-col items-center border-r border-white/10 pt-8 text-sm md:w-60">
-      <img src={user?.imageUrl || assets.profile} alt="Admin profile" className="h-10 w-10 rounded-full object-cover md:h-14 md:w-14" />
-      <p className="mt-2 hidden max-w-full truncate px-2 text-base md:block">{user?.fullName || user?.firstName || "Admin"}</p>
-      <nav className="mt-7 w-full">
-        {links.map(({ name, path, icon: Icon }) => (
-          <NavLink key={path} to={path} end={path === "/admin"}
-            className={({ isActive }) => `relative flex w-full items-center justify-center gap-3 px-2 py-3 text-gray-400 transition hover:bg-white/5 md:justify-start md:px-8 ${isActive ? "bg-primary/15 text-primary" : ""}`}>
+    <div className="h-[calc(100vh-64px)] md:flex flex-col items-center pt-8 max-w-13 md:max-w-60 w-full border-r border-gray-300/20 text-sm">
+      <img
+        className="h-9 md:h-14 w-9 md:w-14 rounded-full mx-auto"
+        src={user.imageUrl}
+        alt="sidebar"
+      />
+      <p className="mt-2 text-base max-md:hidden">
+        {user.firstName} {user.lastName}
+      </p>
+      <div className="w-full">
+        {adminNavlinks.map((link, index) => (
+          <NavLink
+            key={index}
+            to={link.path}
+            end
+            className={({ isActive }) =>
+              `relative flex items-center max-md:justify-center gap-2 w-full py-2.5 min-md:pl-10 first:mt-6 text-gray-400 ${
+                isActive && "bg-primary/15 text-primary group"
+              }`
+            }
+          >
             {({ isActive }) => (
               <>
-                <Icon className="h-5 w-5 shrink-0" />
-                <span className="hidden md:block">{name}</span>
-                {isActive && <span className="absolute right-0 h-8 w-1 rounded-l bg-primary" />}
+                <link.icon className="w-5 h-5" />
+                <p className="max-md:hidden">{link.name}</p>
+                <span
+                  className={`w-1.5 h-10 rounded-l right-0 absolute ${
+                    isActive && "bg-primary"
+                  }`}
+                />
               </>
             )}
           </NavLink>
         ))}
-      </nav>
-    </aside>
+      </div>
+    </div>
   );
 };
 

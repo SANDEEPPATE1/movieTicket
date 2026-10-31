@@ -1,123 +1,116 @@
 import { inngest } from "../inngest/index.js";
 import Booking from "../models/Booking.js";
 import Show from "../models/Show.js";
-import Stripe from "stripe";
+import stripe from "stripe";
 
+// Function to check availability of selected seats for a movie
 const checkSeatsAvailability = async (showId, selectedSeats) => {
-  const showData = await Show.findById(showId);
-  if (!showData) return false;
-  return !selectedSeats.some((seat) => showData.occupiedSeats?.[seat]);
+  try {
+    const showData = await Show.findById(showId);
+    if (!showData) return false;
+
+    const occupiedSeats = showData.occupiedSeats;
+
+    const isAnySeatTaken = selectedSeats.some((seat) => occupiedSeats[seat]);
+
+    return !isAnySeatTaken;
+  } catch (error) {
+    console.log(error.message);
+    return false;
+  }
 };
 
 export const createBooking = async (req, res) => {
-  let booking;
-  let showData;
-  let userId;
-
   try {
-    userId = req.auth().userId;
-    if (!userId) {
-      return res.status(401).json({ success: false, message: "Please sign in to book tickets." });
-    }
-
+    const { userId } = req.auth();
     const { showId, selectedSeats } = req.body;
-    if (!showId || !Array.isArray(selectedSeats) || selectedSeats.length === 0) {
-      return res.status(400).json({ success: false, message: "A show and at least one seat are required." });
-    }
-    if (selectedSeats.length > 5 || new Set(selectedSeats).size !== selectedSeats.length) {
-      return res.status(400).json({ success: false, message: "Select between 1 and 5 unique seats." });
-    }
-    if (!process.env.STRIPE_SECRET_KEY) {
-      return res.status(500).json({ success: false, message: "Stripe is not configured on the server." });
-    }
+    const { origin } = req.headers;
 
-    showData = await Show.findById(showId).populate("movie");
-    if (!showData || !showData.movie) {
-      return res.status(404).json({ success: false, message: "Show or movie not found." });
-    }
-
+    // Check if the seat is available for the selected show
     const isAvailable = await checkSeatsAvailability(showId, selectedSeats);
+
     if (!isAvailable) {
-      return res.status(409).json({ success: false, message: "One or more selected seats are no longer available. Please refresh and choose again." });
+      return res.json({
+        success: false,
+        message: "Selected Seats are not available.",
+      });
     }
 
-    booking = await Booking.create({
+    // Get the show details
+    const showData = await Show.findById(showId).populate("movie");
+
+    // Create a new booking
+    const booking = await Booking.create({
       user: userId,
       show: showId,
       amount: showData.showPrice * selectedSeats.length,
       bookedSeats: selectedSeats,
     });
 
-    selectedSeats.forEach((seat) => { showData.occupiedSeats[seat] = userId; });
+    selectedSeats.map((seat) => {
+      showData.occupiedSeats[seat] = userId;
+    });
+
     showData.markModified("occupiedSeats");
+
     await showData.save();
 
-    const stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY);
-    const origin = req.headers.origin || process.env.FRONTEND_URL;
-    if (!origin) throw new Error("FRONTEND_URL is missing from server environment variables.");
+    // Stripe Gateway Initialize
+    const stripeInstance = new stripe(process.env.STRIPE_SECRET_KEY);
 
-    const session = await stripeInstance.checkout.sessions.create({
-      success_url: `${origin}/my-bookings?payment=success`,
-      cancel_url: `${origin}/my-bookings?payment=cancelled`,
-      line_items: [{
+    // Creating line items for Stripe
+    const line_items = [
+      {
         price_data: {
-          currency: "inr",
-          product_data: { name: showData.movie.title },
-          unit_amount: Math.round(booking.amount * 100),
+          currency: "usd",
+          product_data: {
+            name: showData.movie.title,
+          },
+          unit_amount: Math.floor(booking.amount) * 100,
         },
         quantity: 1,
-      }],
+      },
+    ];
+
+    const session = await stripeInstance.checkout.sessions.create({
+      success_url: `${origin}/loading/my-bookings`,
+      cancel_url: `${origin}/my-bookings`,
+      line_items: line_items,
       mode: "payment",
-      metadata: { bookingId: booking._id.toString() },
-      expires_at: Math.floor(Date.now() / 1000) + 30 * 60,
+      metadata: {
+        bookingId: booking._id.toString(),
+      },
+      expires_at: Math.floor(Date.now() / 1000) + 30 * 60, // Expires in 30 minutes
     });
 
     booking.paymentLink = session.url;
     await booking.save();
 
-    // Booking and payment session are already created; reminder scheduling must not cancel checkout.
-    try {
-      await inngest.send({
-        name: "app/checkpayment",
-        data: { bookingId: booking._id.toString() },
-      });
-    } catch (inngestError) {
-      console.error("Could not schedule unpaid-booking cleanup:", inngestError.message);
-    }
+    // Run Inngest Scheduler Function to check payment status after 10 minutes
+    await inngest.send({
+      name: "app/checkpayment",
+      data: {
+        bookingId: booking._id.toString(),
+      },
+    });
 
-    return res.status(201).json({ success: true, url: session.url });
+    res.json({ success: true, url: session.url });
   } catch (error) {
-    console.error("Create booking failed:", error);
-
-    // If checkout creation failed, undo the unpaid booking and release its seats.
-    if (booking && showData) {
-      try {
-        booking.bookedSeats.forEach((seat) => {
-          if (showData.occupiedSeats?.[seat] === userId) {
-            delete showData.occupiedSeats[seat];
-          }
-        });
-        showData.markModified("occupiedSeats");
-        await showData.save();
-        await Booking.findByIdAndDelete(booking._id);
-      } catch (rollbackError) {
-        console.error("Booking rollback failed:", rollbackError.message);
-      }
-    }
-
-    return res.status(500).json({ success: false, message: error.message });
+    console.log(error.message);
+    res.json({ success: false, message: error.message });
   }
 };
 
 export const getOccupiedSeats = async (req, res) => {
   try {
-    const showData = await Show.findById(req.params.showId);
-    if (!showData) {
-      return res.status(404).json({ success: false, message: "Show not found." });
-    }
-    return res.json({ success: true, occupiedSeats: Object.keys(showData.occupiedSeats || {}) });
+    const { showId } = req.params;
+    const showData = await Show.findById(showId);
+
+    const occupiedSeats = Object.keys(showData.occupiedSeats);
+
+    res.json({ success: true, occupiedSeats });
   } catch (error) {
-    console.error("Get occupied seats failed:", error.message);
-    return res.status(500).json({ success: false, message: error.message });
+    console.log(error.message);
+    res.json({ success: false, message: error.message });
   }
 };

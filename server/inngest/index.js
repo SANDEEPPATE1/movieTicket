@@ -1,5 +1,5 @@
 import { Inngest } from "inngest";
-import User from "../models/user.js";
+import User from "../models/User.js";
 import Booking from "../models/Booking.js";
 import Show from "../models/Show.js";
 import { sendEmail } from "../configs/nodeMailer.js";
@@ -9,115 +9,82 @@ export const inngest = new Inngest({ id: "movie-ticket-booking" });
 
 // Inngest Function to save user data to a database
 const syncUserCreation = inngest.createFunction(
-  // { id: "sync-user-from-clerk" },
-  // { event: "clerk/user.created" },
-  {
-    id: "sync-user-from-clerk",
-    triggers: [{ event: "clerk/user.created" }]
+  { id: "sync-user-from-clerk" ,
+  triggers:{ event: "clerk/user.created" },
   },
   async ({ event }) => {
     const { id, first_name, last_name, email_addresses, image_url } =
       event.data;
-    const email = email_addresses?.[0]?.email_address;
-
-    if (!id || !email) {
-      throw new Error("Clerk user ID or email is missing");
-    }
-
     const userData = {
-      email,
-      name: `${first_name || ""} ${last_name || ""}`.trim(),
-      image: image_url || "",
+      _id: id,
+      email: email_addresses[0].email_address,
+      name: first_name + " " + last_name,
+      image: image_url,
     };
-
-    await User.findByIdAndUpdate(
-      id,
-      { $set: userData },
-      { upsert: true, new: true, runValidators: true, setDefaultsOnInsert: true }
-    );
+    await User.create(userData);
   }
-)
+);
 
 // Inngest Function to delete user from database
 const syncUserDeletion = inngest.createFunction(
-  { 
-    id: "delete-user-with-clerk",
-  triggers:[{ event: "clerk/user.deleted" }],
+  { id: "delete-user-with-clerk" ,
+  triggers:{ event: "clerk/user.deleted" },
   },
   async ({ event }) => {
     const { id } = event.data;
-    await User.findByIdAndDelete(id)
+    await User.findByIdAndDelete(id);
   }
-)
+);
 
 // Inngest Function to update user data in database
 const syncUserUpdation = inngest.createFunction(
-  { 
-    id: "update-user-from-clerk" ,
-  triggers:[{ event: "clerk/user.updated" }],
+  { id: "update-user-from-clerk" ,
+  triggers:{ event: "clerk/user.updated" },
   },
   async ({ event }) => {
     const { id, first_name, last_name, email_addresses, image_url } =
       event.data;
-    const email = email_addresses?.[0]?.email_address;
-
-    if (!id || !email) {
-      throw new Error("Clerk user ID or email is missing");
-    }
-
     const userData = {
-      email,
-      name: `${first_name || ""} ${last_name || ""}`.trim(),
-      image: image_url || "",
+      _id: id,
+      email: email_addresses[0].email_address,
+      name: first_name + " " + last_name,
+      image: image_url,
     };
-
-    await User.findByIdAndUpdate(
-      id,
-      { $set: userData },
-      { upsert: true, new: true, runValidators: true, setDefaultsOnInsert: true }
-    );
+    await User.findByIdAndUpdate(id, userData);
   }
-)
+);
 
 // Inngest Function to cancel booking and release seats of show after 10 minutes of booking created if payment is not made
 const releaseSeatsAndDeleteBooking = inngest.createFunction(
-  { 
-    id: "release-seats-delete-booking" ,
-  triggers:[{ event: "app/checkpayment" }],
+  { id: "release-seats-delete-booking" ,
+  triggers:{ event: "app/checkpayment" },
   },
   async ({ event, step }) => {
-    // Keep the reservation alive for the same 30 minutes as the Stripe Checkout Session.
-    const thirtyMinutesLater = new Date(Date.now() + 30 * 60 * 1000);
-    await step.sleepUntil("wait-for-30-minutes", thirtyMinutesLater);
+    const tenMinutesLater = new Date(Date.now() + 10 * 60 * 1000);
+    await step.sleepUntil("wait-for-10-minutes", tenMinutesLater);
 
     await step.run("check-payment-status", async () => {
       const bookingId = event.data.bookingId;
       const booking = await Booking.findById(bookingId);
 
-      // A webhook may already have processed or removed the booking.
-      if (!booking || booking.isPaid) return;
-
-      const show = await Show.findById(booking.show);
-      if (show) {
+      // If payment is not made, release seats and delete booking
+      if (!booking.isPaid) {
+        const show = await Show.findById(booking.show);
         booking.bookedSeats.forEach((seat) => {
-          if (show.occupiedSeats?.[seat] === booking.user) {
-            delete show.occupiedSeats[seat];
-          }
+          delete show.occupiedSeats[seat];
         });
         show.markModified("occupiedSeats");
         await show.save();
+        await Booking.findByIdAndDelete(booking._id);
       }
-
-      await Booking.findByIdAndDelete(booking._id);
     });
   }
 );
 
 // Inngest Function to send email when user books a show
 const sendBookingConfirmationEmail = inngest.createFunction(
-  { 
-    id: "send-booking-confirmation-email" ,
-  triggers:[{ event: "app/show.booked" }],
+  { id: "send-booking-confirmation-email" ,
+  triggers:{ event: "app/show.booked" },
   },
   async ({ event, step }) => {
     const { bookingId } = event.data;
@@ -153,12 +120,9 @@ const sendBookingConfirmationEmail = inngest.createFunction(
 
 // Inngest Function to send reminders
 const sendShowReminders = inngest.createFunction(
-  // { id: "send-show-reminders" },
-  // { cron: "0 */8 * * *" }, // Every 8 hours
-  {
-    id: "send-show-reminders",
-    triggers: [{ cron: "0 */8 * * *" }],
-  },
+  { id: "send-show-reminders" ,
+  triggers:{ cron: "0 */8 * * *" },
+  }, // Every 8 hours
   async ({ step }) => {
     const now = new Date();
     const in8Hours = new Date(now.getTime() + 8 * 60 * 60 * 1000);
@@ -167,7 +131,7 @@ const sendShowReminders = inngest.createFunction(
     // Prepare reminder tasks
     const reminderTasks = await step.run("prepare-reminder-tasks", async () => {
       const shows = await Show.find({
-        showDateTime: { $gte: windowStart, $lte: in8Hours },
+        showTime: { $gte: windowStart, $lte: in8Hours },
       }).populate("movie");
 
       const tasks = [];
@@ -187,7 +151,7 @@ const sendShowReminders = inngest.createFunction(
             userEmail: user.email,
             userName: user.name,
             movieTitle: show.movie.title,
-            showTime: show.showDateTime,
+            showTime: show.showTime,
           });
         }
       }
@@ -207,7 +171,7 @@ const sendShowReminders = inngest.createFunction(
             to: task.userEmail,
             subject: `Reminder: Your movie "${task.movieTitle}" starts soon!`,
             body: `<div style="font-family: Arial, sans-serif; padding: 20px;">
-        <h2>Hello ${task.userName},</h2>
+        <h2>Hello ${task.user.name},</h2>
         <p>This is a quick reminder that your movie:<p>
         <h3 style="color: #F84565;">"${task.movieTitle}"</h3>
         <p>
@@ -241,9 +205,8 @@ const sendShowReminders = inngest.createFunction(
 
 // Inngest Function to send notifications when a new show is added
 const sendNewShowNotifications = inngest.createFunction(
-  { 
-    id: "send-new-show-notifications" ,
-  triggers:[{ event: "app/show.added" }],
+  { id: "send-new-show-notifications" ,
+  triggers:{ event: "app/show.added" },
   },
   async ({ event }) => {
     const { movieTitle } = event.data;

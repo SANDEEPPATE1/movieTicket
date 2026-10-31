@@ -1,9 +1,23 @@
-import React from "react";
+import { useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 
-const Loading = () => (
-  <div className="flex min-h-[55vh] items-center justify-center" role="status" aria-label="Loading">
-    <div className="h-12 w-12 animate-spin rounded-full border-4 border-white/15 border-t-primary" />
-  </div>
-);
+const Loading = () => {
+  const { nextUrl } = useParams();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (nextUrl) {
+      setTimeout(() => {
+        navigate("/" + nextUrl);
+      }, 8000);
+    }
+  }, []);
+
+  return (
+    <div className="flex justify-center items-center h-[80vh]">
+      <div className="animate-spin rounded-full h-14 w-14 border-2 border-t-primary"></div>
+    </div>
+  );
+};
 
 export default Loading;

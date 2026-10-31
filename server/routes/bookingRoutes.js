@@ -1,5 +1,4 @@
 import express from "express";
-import { requireAuth } from "@clerk/express";
 import {
   createBooking,
   getOccupiedSeats,
@@ -7,7 +6,8 @@ import {
 
 const bookingRouter = express.Router();
 
-bookingRouter.post("/create", requireAuth(), createBooking);
+bookingRouter.post("/create", createBooking);
 bookingRouter.get("/seats/:showId", getOccupiedSeats);
 
 export default bookingRouter;
+

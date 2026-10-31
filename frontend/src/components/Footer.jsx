@@ -1,38 +1,57 @@
-import React from "react";
-import { Link } from "react-router-dom";
-import { assets } from "../QuickShow-assets/assets/assets";
+import { assets } from "../assets/assets";
 
-const Footer = () => (
-  <footer className="mt-28 w-full border-t border-white/10 px-6 pt-12 text-gray-300 md:px-16 lg:px-36">
-    <div className="flex flex-col justify-between gap-10 border-b border-white/10 pb-10 md:flex-row">
-      <div className="max-w-md">
-        <Link to="/"><img alt="QuickShow" className="h-10 w-auto" src={assets.logo} /></Link>
-        <p className="mt-5 text-sm leading-6 text-gray-400">
-          Discover movies, explore upcoming shows and keep your favorite films in one place with QuickShow.
-        </p>
-        <div className="mt-5 flex items-center gap-3">
-          <img src={assets.googlePlay} alt="Get it on Google Play" className="h-9 w-auto" />
-          <img src={assets.appStore} alt="Download on the App Store" className="h-9 w-auto" />
+const Footer = () => {
+  return (
+    <footer className="px-6 md:px-16 lg:px-36 mt-40 w-full text-gray-300">
+      <div className="flex flex-col md:flex-row justify-between w-full gap-10 border-b border-gray-500 pb-14">
+        <div className="md:max-w-96">
+          <img className="w-36 h-auto" src={assets.logo} alt="logo" />
+          <p className="mt-6 text-sm">
+            Lorem Ipsum has been the industry's standard dummy text ever since
+            the 1500s, when an unknown printer took a galley of type and
+            scrambled it to make a type specimen book.
+          </p>
+          <div className="flex items-center gap-2 mt-4">
+            <img
+              src={assets.googlePlay}
+              alt="google play"
+              className="h-9 w-auto"
+            />
+            <img src={assets.appStore} alt="app store" className="h-9 w-auto" />
+          </div>
+        </div>
+        <div className="flex-1 flex items-start md:justify-end gap-20 md:gap-40">
+          <div>
+            <h2 className="font-semibold mb-5">Company</h2>
+            <ul className="text-sm space-y-2">
+              <li>
+                <a href="#">Home</a>
+              </li>
+              <li>
+                <a href="#">About us</a>
+              </li>
+              <li>
+                <a href="#">Contact us</a>
+              </li>
+              <li>
+                <a href="#">Privacy policy</a>
+              </li>
+            </ul>
+          </div>
+          <div>
+            <h2 className="font-semibold mb-5">Get in touch</h2>
+            <div className="text-sm space-y-2">
+              <p>+250-784-652-570</p>
+              <p>elyseniyibizi@gmail.com</p>
+            </div>
+          </div>
         </div>
       </div>
-      <div className="flex gap-16 text-sm">
-        <div>
-          <h2 className="mb-4 font-semibold text-white">Explore</h2>
-          <ul className="space-y-3 text-gray-400">
-            <li><Link className="hover:text-white" to="/">Home</Link></li>
-            <li><Link className="hover:text-white" to="/movies">Movies</Link></li>
-            <li><Link className="hover:text-white" to="/favorite">Favorites</Link></li>
-            <li><Link className="hover:text-white" to="/my-bookings">My Bookings</Link></li>
-          </ul>
-        </div>
-        <div>
-          <h2 className="mb-4 font-semibold text-white">QuickShow</h2>
-          <p className="max-w-44 leading-6 text-gray-400">Your movie discovery and showtime companion.</p>
-        </div>
-      </div>
-    </div>
-    <p className="py-5 text-center text-xs text-gray-500">© {new Date().getFullYear()} QuickShow. All rights reserved.</p>
-  </footer>
-);
+      <p className="pt-4 text-center text-sm pb-5">
+        Copyright {new Date().getFullYear()} © ElyséeDev. All Right Reserved.
+      </p>
+    </footer>
+  );
+};
 
 export default Footer;
