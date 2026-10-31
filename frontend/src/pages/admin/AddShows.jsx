@@ -16,6 +16,7 @@ const AddShows = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [sourceWarning, setSourceWarning] = useState("");
 
   const loadMovies = useCallback(async () => {
     setLoading(true);
@@ -23,8 +24,10 @@ const AddShows = () => {
     try {
       const data = await request("/api/show/now-playing");
       setMovies(Array.isArray(data.movies) ? data.movies : []);
+      setSourceWarning(data.warning || "");
     } catch (err) {
       setMovies([]);
+      setSourceWarning("");
       setError(err.message || "Could not load movies.");
     } finally {
       setLoading(false);
@@ -33,7 +36,7 @@ const AddShows = () => {
 
   useEffect(() => {
     loadMovies();
-  }, []);
+  }, [loadMovies]);
 
   const handleDateTimeAdd = () => {
     if (!dateTimeInput) {
@@ -122,6 +125,10 @@ const AddShows = () => {
           Retry loading
         </button>
       </div>
+
+      {sourceWarning && (
+        <p role="status" className="mt-4 rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-3 text-sm text-yellow-200">{sourceWarning}</p>
+      )}
 
       {error && (
         <div role="alert" className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-300">
