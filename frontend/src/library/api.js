@@ -8,10 +8,10 @@ export const useApi = () => {
 
   const request = async (endpoint, options = {}) => {
     let token = null;
+
     try {
       token = await getToken();
     } catch (error) {
-      // Public endpoints should still work if Clerk cannot refresh a session.
       console.warn("Could not retrieve Clerk session token:", error.message);
     }
 
@@ -19,6 +19,7 @@ export const useApi = () => {
     try {
       response = await fetch(`${getApiBaseUrl()}${endpoint}`, {
         ...options,
+        signal: options.signal || AbortSignal.timeout(25000),
         headers: {
           ...(options.body ? { "Content-Type": "application/json" } : {}),
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -26,13 +27,25 @@ export const useApi = () => {
         },
       });
     } catch (error) {
-      throw new Error("Unable to reach the QuickShow server. Check the API URL and your internet connection.");
+      if (error.name === "TimeoutError" || error.name === "AbortError") {
+        throw new Error("The server request timed out. Please try again.");
+      }
+      throw new Error(
+        "Unable to reach the QuickShow backend. Check VITE_BASE_URL and the backend deployment."
+      );
     }
 
-    const data = await response.json().catch(() => ({}));
+    const contentType = response.headers.get("content-type") || "";
+    const data = contentType.includes("application/json")
+      ? await response.json().catch(() => ({}))
+      : { message: await response.text().catch(() => "") };
+
     if (!response.ok || data.success === false) {
-      throw new Error(data.message || `Request failed (${response.status})`);
+      throw new Error(
+        data.message || `Request failed with status ${response.status}.`
+      );
     }
+
     return data;
   };
 
