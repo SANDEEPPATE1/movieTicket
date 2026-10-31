@@ -18,13 +18,23 @@ const syncUserCreation = inngest.createFunction(
   async ({ event }) => {
     const { id, first_name, last_name, email_addresses, image_url } =
       event.data;
+    const email = email_addresses?.[0]?.email_address;
+
+    if (!id || !email) {
+      throw new Error("Clerk user ID or email is missing");
+    }
+
     const userData = {
-      _id: id,
-      email: email_addresses[0].email_address,
-      name: first_name + " " + last_name,
-      image: image_url,
+      email,
+      name: `${first_name || ""} ${last_name || ""}`.trim(),
+      image: image_url || "",
     };
-    await User.create(userData);
+
+    await User.findByIdAndUpdate(
+      id,
+      { $set: userData },
+      { upsert: true, new: true, runValidators: true, setDefaultsOnInsert: true }
+    );
   }
 )
 
@@ -49,13 +59,23 @@ const syncUserUpdation = inngest.createFunction(
   async ({ event }) => {
     const { id, first_name, last_name, email_addresses, image_url } =
       event.data;
+    const email = email_addresses?.[0]?.email_address;
+
+    if (!id || !email) {
+      throw new Error("Clerk user ID or email is missing");
+    }
+
     const userData = {
-      _id: id,
-      email: email_addresses[0].email_address,
-      name: first_name + " " + last_name,
-      image: image_url,
+      email,
+      name: `${first_name || ""} ${last_name || ""}`.trim(),
+      image: image_url || "",
     };
-    await User.findByIdAndUpdate(id, userData)
+
+    await User.findByIdAndUpdate(
+      id,
+      { $set: userData },
+      { upsert: true, new: true, runValidators: true, setDefaultsOnInsert: true }
+    );
   }
 )
 
