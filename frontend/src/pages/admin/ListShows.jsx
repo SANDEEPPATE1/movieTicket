@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import Loading from "../../components/Loading";
 import Title from "../../components/admin/Title";
-import { dateFormat } from "../../lib/dateFormat";
+import { dateFormat } from "../../lib/dateformat";
 import { useAppContext } from "../../context/AppContext";
 
 const ListShows = () => {
